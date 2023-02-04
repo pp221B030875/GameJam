@@ -1,18 +1,24 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class BoerController : MonoBehaviour
 {
     private Animator anim;
     public GameObject leftLight, rightLight;
     public GameObject minimap;
+    public GameObject leversChallenge;
     public Transform minimapBoer;
 
     public GameObject infectionLight;
     public GameObject oxygenLight;
     public GameObject stopPanel;
+    [SerializeField] private GameObject console;
+    [SerializeField] private Text eventText;
 
+    [SerializeField] private Slider lever;
+    [SerializeField] private float timerBeforeGo;
 
     [SerializeField] private float minimapMoveX, minimapMoveY;
 
@@ -29,13 +35,28 @@ public class BoerController : MonoBehaviour
 
     private void Start()
     {
-        noAttack = 0;
+        timerBeforeGo = 10;
+        noAttack = 5;
         forward= 3;
         anim = GetComponent<Animator>();
         curPos = transform.position;
     }
     private void Update()
     {
+        if(lever.value == 0)
+        {
+            timerBeforeGo = 10;
+        }
+        if(timerBeforeGo<=0 && lever.value == 1)
+        {
+            moveBoer();
+            lever.value = 0;
+        }
+        else if(timerBeforeGo>0 && lever.value == 1)
+        {
+            timerBeforeGo -= Time.deltaTime;
+        }
+
         if (Input.GetKeyDown(KeyCode.M))
         {
             minimap.SetActive(!minimap.activeSelf);
@@ -104,7 +125,9 @@ public class BoerController : MonoBehaviour
         {
             leftBut = true;
             rightBut = false;
-        }else leftBut = false;
+            rightLight.SetActive(false);
+        }
+        else leftBut = false;
         leftLight.SetActive(!leftLight.activeSelf);
 
     }
@@ -114,7 +137,9 @@ public class BoerController : MonoBehaviour
         {
             leftBut = false;
             rightBut = true;
-        }else rightBut = false;
+            leftLight.SetActive(false);
+        }
+        else rightBut = false;
         rightLight.SetActive(!rightLight.activeSelf);
     }
 
@@ -223,8 +248,13 @@ public class BoerController : MonoBehaviour
         }
     }
 
+    public void OpenCloseLeversChallenge()
+    {
+        leversChallenge.SetActive(!leversChallenge.activeSelf);
+    }
     public void FixBoer()
     {
+        eventText.text = "";
         stopPanel.SetActive(false);
         oxygenLight.SetActive(false);
         infectionLight.SetActive(false);
@@ -232,5 +262,15 @@ public class BoerController : MonoBehaviour
     public void BreakBoer()
     {
         stopPanel.SetActive(true);
+    }
+
+    public void OpenCloseMap()
+    {
+        minimap.SetActive(!minimap.activeSelf);
+    }
+
+    public void OpenCloseConsole()
+    {
+        console.SetActive(!console.activeSelf);
     }
 }

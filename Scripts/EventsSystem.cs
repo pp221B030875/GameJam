@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class EventsSystem : MonoBehaviour
 {
@@ -10,9 +11,13 @@ public class EventsSystem : MonoBehaviour
     [SerializeField] private int chanceInfection = 20;
 
     [SerializeField] private BoerController boer;
+    [SerializeField] private LeversChallange leversChallange;
+    [SerializeField] private Text eventText;
     private Vector3 screenPos;
 
-    private bool visited;
+    private bool visited; //did we just move to this tail?
+    private bool changedColorMap;
+    [SerializeField] private Map tailMap;
     //[SerializeField] private int idOfEvent; 
     // 0-НападениеКорней; 1-УтечкаКислорода; 2-НападениеПаразитов
     // 3-ЗаражениеКабинки
@@ -20,6 +25,7 @@ public class EventsSystem : MonoBehaviour
     private void Start()
     {
         visited = false;
+        changedColorMap = false;
         screenPos = new Vector3(transform.position.x, transform.position.y, -10);
     }
 
@@ -33,6 +39,12 @@ public class EventsSystem : MonoBehaviour
         else if(boer.curPos != screenPos)
         {
             visited = false;
+        }
+
+        if(!changedColorMap && visited)
+        {
+            changedColorMap = true;
+            tailMap.ChangeColor();
         }
     }
     public void StartEvent()
@@ -78,24 +90,30 @@ public class EventsSystem : MonoBehaviour
     private void RootsAttack()
     {
         Debug.Log("You are attacking by roots");
+        eventText.text = "You are attacking by roots";
+        leversChallange.StartChallenge();
         boer.rootsAttacked = true;
     }
 
     private void ParasitesAttack()
     {
         Debug.Log("You are attacking by parasites");
+        eventText.text = "You are attacking by parasites";
+        leversChallange.StartChallenge();
         boer.parasitesAttacked = true;
     }
     
     private void Oxygen()
     {
         Debug.Log("Oxygen Leak");
+        leversChallange.StartChallenge();
         boer.oxygenLight.SetActive(!boer.oxygenLight.activeSelf);
     }
 
     private void Infection()
     {
         Debug.Log("The infection penetrates inside");
+        leversChallange.StartChallenge();
         boer.infectionLight.SetActive(!boer.infectionLight.activeSelf);
     }
 
