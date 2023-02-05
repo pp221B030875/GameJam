@@ -4,74 +4,72 @@ using UnityEngine;
 
 public class LeversChallange : MonoBehaviour
 {
-    [SerializeField] private List<Slider> levers;
-    private int[] keyNums = new int[4];
+    [SerializeField] private Slider[] levers;
+    private int[] keyNums;
     private int randNum;
-
-    private bool hasLever;
-    private bool rightKeys;
-    private bool checkedKeys;
 
     [SerializeField] private GameObject invisiblePanel;
     [SerializeField] private GameObject fixedText;
     [SerializeField] private BoerController boer;
 
-    private void Start()
-    {
-        hasLever = false;
-        rightKeys = false;
-        checkedKeys = false;
-    }
 
     public void StartChallenge()
     {
+        keyNums = new int[4];
         RestartLevers();
 
-        while (!hasLever)
+        while (!boer.hasLever)
         {
             for (int i = 0; i < 4; i++)
             {
                 randNum = Random.Range(0, 2);
                 if (randNum == 1)
                 {
-                    hasLever = true;
+                    boer.hasLever = true;
                 }
                 keyNums[i] = randNum;
             }
+            
         }
-        
+        for(int i = 0; i < 4; i++)
+        {
+            Debug.Log(keyNums[i]);
+        }
+        boer.createdArray = true;
     }
 
     private void Update()
     {
-        if (rightKeys)
+        if (boer.rightKeys)
         {
             fixedText.SetActive(true);
             invisiblePanel.SetActive(true);
             boer.FixBoer();
         }
-        else
+        if(boer.createdArray && boer.hasLever)
         {
             for(int i = 0; i < 4; i++)
             {
                 if (keyNums[i] == levers[i].value)
                 {
-                    checkedKeys= true;
+                    boer.checkedKeys = true;
                 }
-                else checkedKeys = false;
+                else
+                {
+                    boer.checkedKeys = false;
+                    break;
+                }
             }
-            if (checkedKeys){
-                rightKeys= true;
+            if (boer.checkedKeys){
+                boer.rightKeys = true;
             }
         }
     }
 
     private void RestartLevers()
     {
-        rightKeys = false;
         invisiblePanel.SetActive(false);
         fixedText.SetActive(false);
-        hasLever = false;
         for (int i = 0; i < 4; i++)
         {
             levers[i].value = 0;

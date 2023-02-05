@@ -2,23 +2,34 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class BoerController : MonoBehaviour
 {
+
+    public AudioSource button;
+    public AudioSource gettingMatSound;
+    public AudioSource alarm;
+    public AudioSource boerSoundA;
+
     private Animator anim;
     public GameObject leftLight, rightLight;
-    public GameObject minimap;
-    public GameObject leversChallenge;
+    public GameObject leversChallengeMenu;
     public Transform minimapBoer;
 
-    public GameObject infectionLight;
-    public GameObject oxygenLight;
+    [SerializeField] private GameObject startMessage;
+    [SerializeField] private GameObject finishMessage;
+    [SerializeField] private GameObject pauseMenu;
+    public GameObject roots;
+
     public GameObject stopPanel;
-    [SerializeField] private GameObject console;
+    [SerializeField] private GameObject illuminationOff;
+    [SerializeField] private LeversChallange leversChallange;
     [SerializeField] private Text eventText;
 
     [SerializeField] private Slider lever;
     [SerializeField] private float timerBeforeGo;
+    public float timerToFixBoer;
 
     [SerializeField] private float minimapMoveX, minimapMoveY;
 
@@ -29,23 +40,72 @@ public class BoerController : MonoBehaviour
     [SerializeField] private float maxX,minX,maxY,minY;
     public Vector3 curPos;
 
-    public int noAttack;
-    public bool rootsAttacked, parasitesAttacked;
 
+    private bool startFilterForOxygen, startFilterForToxic;
+    public GameObject infectionLight;
+    public GameObject oxygenLight;
+    public Text oxygenNormalModeText;
+    public Text toxicNormalModeText;
+    public Image oxygenBar;
+    public Image toxicBar;
+
+    public int noAttack;
+    public bool rootsAttacked;
+    public bool filtersEvent, rootsEvent;
+
+    public bool hasLever, rightKeys, checkedKeys, createdArray;
+
+    public Journal journal;
+
+    public GameObject getMaterialLight;
+    [SerializeField] private bool gettingMaterial;
+    public bool gotMaterial;
+    [SerializeField] private float timerBeforeGetMaterial;
+
+
+    public bool highTemperature;
+    public GameObject indicatorTemp;
+    public Image temperatureBar;
 
     private void Start()
     {
-        timerBeforeGo = 10;
+        roots.SetActive(false);
+        finishMessage.SetActive(false);
+        startMessage.SetActive(true);
+
+        journal = GetComponent<Journal>();
+        getMaterialLight.SetActive(true);
+        gettingMaterial = false;
+        gotMaterial = false;
+
+        filtersEvent = false;
+        rootsEvent = false;
+
+        startFilterForOxygen = false;
+        startFilterForToxic = false;
+        oxygenNormalModeText.text = "Normal Mode";
+        toxicNormalModeText.text = "Normal Mode";
+
+        indicatorTemp.SetActive(false);
+        highTemperature = false;
+        illuminationOff.SetActive(false);
+        timerBeforeGo = 7;
         noAttack = 5;
         forward= 3;
         anim = GetComponent<Animator>();
         curPos = transform.position;
     }
+
     private void Update()
     {
         if(lever.value == 0)
         {
-            timerBeforeGo = 10;
+            if (boerSoundA.volume > 0)
+            {
+                boerSoundA.volume -= (float)(Time.deltaTime*0.1);
+                boerSoundA.Stop();
+            }
+            timerBeforeGo = 7;
         }
         if(timerBeforeGo<=0 && lever.value == 1)
         {
@@ -54,12 +114,76 @@ public class BoerController : MonoBehaviour
         }
         else if(timerBeforeGo>0 && lever.value == 1)
         {
+            if (boerSoundA.volume < 0.5)
+            {
+                boerSoundA.volume += (float)(Time.deltaTime);
+                boerSoundA.Play();
+            }
             timerBeforeGo -= Time.deltaTime;
         }
 
-        if (Input.GetKeyDown(KeyCode.M))
+        if (rootsAttacked || oxygenLight.activeSelf || infectionLight.activeSelf)
         {
-            minimap.SetActive(!minimap.activeSelf);
+            if(timerToFixBoer <= 0)
+            {
+                YouAreDead();
+            }
+
+            timerToFixBoer -= Time.deltaTime;
+        }
+
+        if (startFilterForOxygen && filtersEvent && oxygenLight.activeSelf)
+        {
+            oxygenBar.fillAmount += (float)(Time.deltaTime * 0.1);
+
+            if(oxygenBar.fillAmount == 1)
+            {
+                startFilterForOxygen = false;
+                oxygenNormalModeText.text = "Normal Mode";
+                FixBoer();
+                filtersEvent = false;
+            }
+        }
+        if (startFilterForToxic && filtersEvent && infectionLight.activeSelf)
+        {
+            toxicBar.fillAmount += (float)(Time.deltaTime * 0.1);
+
+            if (toxicBar.fillAmount == 1)
+            {
+                startFilterForToxic = false;
+                toxicNormalModeText.text = "Normal Mode";
+                FixBoer();
+                filtersEvent = false;
+            }
+        }
+
+        if (gettingMaterial)
+        {
+            BreakBoer();
+            timerBeforeGetMaterial -= Time.deltaTime;
+            if (timerBeforeGetMaterial < 0)
+            {
+                gettingMatSound.Stop();
+                FixBoer();  
+                gettingMaterial= false;
+                gotMaterial = true;
+                getMaterialLight.SetActive(true);
+                journal.UpdateMission();
+            }
+        }
+
+        if (highTemperature)
+        {
+            temperatureBar.fillAmount += (float)(Time.deltaTime * 0.05);
+            if (temperatureBar.fillAmount == 1)
+            {
+                YouAreDead();
+            }
+        }
+        else
+        {
+            indicatorTemp.SetActive(false);
+            temperatureBar.fillAmount = 0;
         }
     }
     private bool goUp()
@@ -121,6 +245,7 @@ public class BoerController : MonoBehaviour
 
     public void leftButton()
     {
+        button.Play();
         if (!leftBut)
         {
             leftBut = true;
@@ -133,6 +258,7 @@ public class BoerController : MonoBehaviour
     }
     public void rightButton()
     {
+        button.Play();
         if (!rightBut)
         {
             leftBut = false;
@@ -145,11 +271,11 @@ public class BoerController : MonoBehaviour
 
     public void moveBoer()
     {
+        temperatureBar.fillAmount = 0;
         if (noAttack > 0) noAttack--;
         else
         {
             rootsAttacked= false;
-            parasitesAttacked= false;
         }
         
         if (leftBut)
@@ -250,27 +376,94 @@ public class BoerController : MonoBehaviour
 
     public void OpenCloseLeversChallenge()
     {
-        leversChallenge.SetActive(!leversChallenge.activeSelf);
+        button.Play();
+        leversChallengeMenu.SetActive(!leversChallengeMenu.activeSelf);
+        if (!createdArray && illuminationOff.activeSelf)
+        {
+            leversChallange.StartChallenge();
+        }
     }
+
     public void FixBoer()
     {
+        alarm.Stop();
         eventText.text = "";
+        illuminationOff.SetActive(false);
         stopPanel.SetActive(false);
         oxygenLight.SetActive(false);
         infectionLight.SetActive(false);
+
+        rootsAttacked = false;
+        rootsEvent = false;
     }
     public void BreakBoer()
     {
+        lever.value = 0;
         stopPanel.SetActive(true);
     }
 
-    public void OpenCloseMap()
+    public void TurnOfBoer()
     {
-        minimap.SetActive(!minimap.activeSelf);
+        roots.SetActive(false);
+
+        hasLever = false;
+        checkedKeys = false;
+        createdArray = false;
+        rightKeys = false;
+
+        BreakBoer();
+        gettingMaterial = false;
+        lever.value = 0;
+        illuminationOff.SetActive(true);
+        leversChallange.StartChallenge();
     }
 
-    public void OpenCloseConsole()
+    public void StartFiltersForOxygen()
     {
-        console.SetActive(!console.activeSelf);
+        button.Play();
+        startFilterForOxygen = true;
+    }
+    public void StartFiltersForToxic()
+    {
+        button.Play();
+        startFilterForToxic = true; 
+    }
+
+    public void GetMaterial()
+    {
+        button.Play();
+        gettingMatSound.Play();
+        gettingMaterial= true;
+        timerBeforeGetMaterial = 10;
+    }
+
+    private void YouAreDead()
+    {
+        Debug.Log("You are dead");
+        SceneManager.LoadScene(0);
+    }
+
+    public void StartGame()
+    {
+        button.Play();
+        startMessage.SetActive(false);
+    }
+
+    public void FinishGame()
+    {
+        finishMessage.SetActive(true);
+    }
+    public void StartAgain()
+    {
+        SceneManager.LoadScene(0);
+    }
+
+    public void OpenClosePauseMenu()
+    {
+        pauseMenu.SetActive(!pauseMenu.activeSelf);
+    }
+    public void ExitGame()
+    {
+        Application.Quit();
     }
 }

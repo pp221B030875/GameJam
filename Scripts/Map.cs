@@ -6,7 +6,19 @@ using UnityEngine.UI;
 public class Map : MonoBehaviour
 {
     //0-red, 1-green, 2-blue, 3-yellow, 4-dark red, 5-white, 6-bro you dont need to go there, 7-orange
-    [SerializeField] private int intColorOfTail;
+    public int intColorOfTail;
+    [SerializeField] private GameObject material;
+    public bool hasMaterial;
+
+    private void Start()
+    {
+        if (hasMaterial) material.SetActive(true);
+    }
+
+    public void GotMaterial()
+    {
+        material.SetActive(false);
+    }
 
     public void ChangeColor()
     {

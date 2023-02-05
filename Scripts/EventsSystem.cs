@@ -6,12 +6,10 @@ using UnityEngine.UI;
 public class EventsSystem : MonoBehaviour
 {
     [SerializeField] private int chanceRoots = 2;
-    [SerializeField] private bool chanceParasites;
     [SerializeField] private int chanceOxygen = 20;
     [SerializeField] private int chanceInfection = 20;
 
     [SerializeField] private BoerController boer;
-    [SerializeField] private LeversChallange leversChallange;
     [SerializeField] private Text eventText;
     private Vector3 screenPos;
 
@@ -21,6 +19,9 @@ public class EventsSystem : MonoBehaviour
     //[SerializeField] private int idOfEvent; 
     // 0-НападениеКорней; 1-УтечкаКислорода; 2-НападениеПаразитов
     // 3-ЗаражениеКабинки
+
+    [SerializeField] private bool tailMaterial,highTempTail,saveTail,finishTail;
+
 
     private void Start()
     {
@@ -34,11 +35,43 @@ public class EventsSystem : MonoBehaviour
         if(boer.curPos == screenPos && !visited)
         {
             visited = true;
-            StartEvent();
+            if (finishTail && boer.journal.numberMaterials == 4)
+            {
+                boer.FinishGame();
+                return;
+            }
+            if (tailMaterial)
+            {
+                boer.highTemperature = false;
+                boer.getMaterialLight.SetActive(false);
+            }
+            else if (highTempTail)
+            {
+                HighTemperature();
+            }
+            else if(!saveTail)
+            {
+                boer.highTemperature = false;
+                boer.getMaterialLight.SetActive(true);
+                StartEvent();
+            }
+            else
+            {
+                visited = true;
+            }
         }
         else if(boer.curPos != screenPos)
         {
             visited = false;
+        }
+        if(boer.gotMaterial == true)
+        {
+            tailMaterial = false;
+            if (tailMap.hasMaterial)
+            {
+                tailMap.GotMaterial();
+            }
+            boer.gotMaterial = false;
         }
 
         if(!changedColorMap && visited)
@@ -47,23 +80,17 @@ public class EventsSystem : MonoBehaviour
             tailMap.ChangeColor();
         }
     }
+
+
+
     public void StartEvent()
     {
         int randNum = Random.Range(0,chanceRoots);
-
-        if (chanceParasites)
-        {
-            ParasitesAttack();
-            boer.noAttack = 5;
-            boer.BreakBoer();
-            return;
-        }
 
         if (randNum == 0 && boer.noAttack==0)
         {
             RootsAttack();
             boer.noAttack = 5;
-            boer.BreakBoer();
             return;
         }
         randNum = Random.Range(0, chanceOxygen);
@@ -72,16 +99,14 @@ public class EventsSystem : MonoBehaviour
         {
             Oxygen();
             boer.oxygenLight.SetActive(true);
-            boer.BreakBoer();
             return;
         }
         randNum = Random.Range(0, chanceInfection);
 
-        if (randNum == 0 || boer.parasitesAttacked && randNum < 2)
+        if (randNum == 0 || boer.rootsAttacked && randNum < 2)
         {
             Infection();
             boer.infectionLight.SetActive(true);
-            boer.BreakBoer();
             return;
         }
 
@@ -89,36 +114,41 @@ public class EventsSystem : MonoBehaviour
 
     private void RootsAttack()
     {
+        boer.roots.SetActive(true);
+        boer.alarm.Play();
+        boer.timerToFixBoer = 40;
         Debug.Log("You are attacking by roots");
         eventText.text = "You are attacking by roots";
-        leversChallange.StartChallenge();
         boer.rootsAttacked = true;
-    }
-
-    private void ParasitesAttack()
-    {
-        Debug.Log("You are attacking by parasites");
-        eventText.text = "You are attacking by parasites";
-        leversChallange.StartChallenge();
-        boer.parasitesAttacked = true;
+        boer.rootsEvent = true;
     }
     
     private void Oxygen()
     {
+        boer.alarm.Play();
+        boer.timerToFixBoer = 40;
         Debug.Log("Oxygen Leak");
-        leversChallange.StartChallenge();
         boer.oxygenLight.SetActive(!boer.oxygenLight.activeSelf);
+        boer.oxygenBar.fillAmount = 0;
+        boer.oxygenNormalModeText.text = "Danger Mode";
+        boer.filtersEvent = true;   
     }
 
     private void Infection()
     {
+        boer.alarm.Play();
+        boer.timerToFixBoer = 60;
         Debug.Log("The infection penetrates inside");
-        leversChallange.StartChallenge();
         boer.infectionLight.SetActive(!boer.infectionLight.activeSelf);
+        boer.toxicBar.fillAmount = 0;
+        boer.toxicNormalModeText.text = "Danger Mode";
+        boer.filtersEvent = true;
     }
 
-    private void TurnOfBoer()
+    private void HighTemperature()
     {
-
+        boer.indicatorTemp.SetActive(true);
+        boer.temperatureBar.fillAmount = 0;
+        boer.highTemperature = true;
     }
 }
